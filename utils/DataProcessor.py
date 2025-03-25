@@ -34,6 +34,7 @@ class DataProcessor:
         self.filename = filename
         self.ARname = ARname
         self.verbose = verbose
+        self.read_ME = False
 
     def read_data(self, read_ME=False):
         """
@@ -45,6 +46,8 @@ class DataProcessor:
         Returns:
             pd.DataFrame: Concatenated DataFrame containing all datasets.
         """
+        self.read_ME = read_ME
+        
         dataframes = []
         ME_dataframes = []
         
@@ -81,53 +84,65 @@ class DataProcessor:
             for i, job in enumerate(jobs): 
                 hy_job = job.split("/")[-1].strip()
                 hy_path = os.path.join(datapath, hy_job)
-
-                dataset_info = {"Dataset": dataset, "Run": runs[i] if i < len(runs) else None, "Job": hy_job}
+                run = runs[i] if i < len(runs) else None
+                dataset_info = {"Dataset": dataset, "Run": run, "Job": hy_job}
 
                 if os.path.exists(hy_path):
-                    path = f"{datapath}/{hy_job}/AO2D.root"
-                    #if not os.path.exists(path): print("⚠️ WARNING: AO2D.root file not found")
+                    
                     if self.verbose: print(f"======== RUN:{runs[i], }PROCESSING FILE {path}")
-            
-                    try:
-                        with uproot.open(path) as root_file:
+                        
+                    path = f"{datapath}/{hy_job}"
+                    
+                    dataframe, MEdataframe = self.read_AO2D(path, dataset, run, hy_job, filename="AO2D.root")
 
-                            for j in range(1, len(root_file.keys())):
-                                key_name = root_file.keys()[j]
-
-                                # Only trees with the name of the derived dataset (specified in writerconfig)
-                                if any(substring in key_name for substring in ['O2dqbmesonsa', 'O2dqbmesons']):
-                                    if self.verbose: print(f"Keys in the ROOT file: {key_name}")
-
-                                    df = root_file[key_name].arrays(library="pd")
-                                    df["Dataset"] = dataset
-                                    df["Run"] = runs[i] if i < len(runs) else None
-                                    df["Job"] = hy_job
-
-                                    if df.empty: # some runs have empty dataframes
-                                        print(f"⚠️ Dataframe is empty. {runs[i]}, {datapath}/{hy_job} is not being read properly")
-                                        dataframes.append(pd.DataFrame([dataset_info]))
-
-                                    dataframes.append(df)
-
-                            # Read ME histogram and make a dataframe of these histograms
-                            if read_ME: 
-                                ME_histogram = self.read_ME_histograms(f"{dataset}/{hy_job}")
-                                ME_dict = {"Dataset": dataset, "Run": runs[i], "Job": job, "ME histogram": ME_histogram}
-                                ME_dataframes.append(pd.DataFrame([ME_dict]))  
-
-                    except FileNotFoundError:
-                        print(f"⚠️ WARNING: 3 File not found {path}, {runs[i]}")
-                        dataframes.append(pd.DataFrame([dataset_info]))
-                        ME_dataframes.append(pd.DataFrame([dataset_info]))
-                        continue
+                    dataframes.extend(dataframe)
+                    ME_dataframes.extend(MEdataframe)
 
         data_df = pd.concat(dataframes, ignore_index=True) if dataframes else pd.DataFrame()
-
 
         ME_df = pd.concat(ME_dataframes, ignore_index=True) if ME_dataframes else pd.DataFrame()
 
         return data_df, ME_df
+    
+    def read_AO2D(self, path, dataset, run, hy_job, filename="AO2D.root"):
+        
+        dataframes = []
+        ME_dataframes = []
+        
+        path = f"{path}/{filename}"
+        
+        try:
+                with uproot.open(path) as root_file:
+                    for j in range(1, len(root_file.keys())):
+                        key_name = root_file.keys()[j]
+
+                         # Only trees with the name of the derived dataset (specified in writerconfig)
+                        if any(substring in key_name for substring in ['O2dqbmesonsa', 'O2dqbmesons']):
+                            if self.verbose: print(f"Keys in the ROOT file: {key_name}")
+                            df = root_file[key_name].arrays(library="pd")
+                            df["Dataset"] = dataset
+                            df["Run"] = run
+                            df["Job"] = hy_job
+
+                            #if df.empty: # some runs have empty dataframes
+                            #    print(f"⚠️ Dataframe is empty. {runs[i]}, {datapath}/{hy_job} is not being read properly")
+                      #              dataframes.append(pd.DataFrame([dataset_info]))
+
+                            dataframes.append(df)
+
+                        # Read ME histogram and make a dataframe of these histograms
+                        if self.read_ME: 
+                            ME_histogram = self.read_ME_histograms(f"{dataset}/{hy_job}")
+                            #ME_dict = {"Dataset": dataset, "Run": runs[i], "Job": job, "ME histogram": ME_histogram}
+                            
+                            ME_dataframes.append(pd.DataFrame([ME_dict]))  
+        except FileNotFoundError:
+            print(f"⚠️ WARNING: 3 File not found {path}")
+            #dataframes.append(pd.DataFrame([dataset_info]))
+            #ME_dataframes.append(pd.DataFrame([dataset_info]))
+            #continue
+            
+        return dataframes, ME_dataframes
     
     def pre_processing(self, df):
         """
