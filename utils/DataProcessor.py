@@ -85,7 +85,6 @@ class DataProcessor:
                 hy_job = job.split("/")[-1].strip()
                 hy_path = os.path.join(datapath, hy_job)
                 run = runs[i] if i < len(runs) else None
-                dataset_info = {"Dataset": dataset, "Run": run, "Job": hy_job}
 
                 if os.path.exists(hy_path):
                     
@@ -111,6 +110,8 @@ class DataProcessor:
         
         path = f"{path}/{filename}"
         
+        dataset_info = {"Dataset": dataset, "Run": run, "Job": hy_job}
+        
         try:
                 with uproot.open(path) as root_file:
                     for j in range(1, len(root_file.keys())):
@@ -124,22 +125,22 @@ class DataProcessor:
                             df["Run"] = run
                             df["Job"] = hy_job
 
-                            #if df.empty: # some runs have empty dataframes
-                            #    print(f"⚠️ Dataframe is empty. {runs[i]}, {datapath}/{hy_job} is not being read properly")
-                      #              dataframes.append(pd.DataFrame([dataset_info]))
+                            if df.empty: # some runs have empty dataframes
+                                print(f"⚠️ Dataframe is empty. {run}, {path}/{hy_job} is not being read properly")
+                                dataframes.append(pd.DataFrame([dataset_info]))
 
                             dataframes.append(df)
 
                         # Read ME histogram and make a dataframe of these histograms
                         if self.read_ME: 
                             ME_histogram = self.read_ME_histograms(f"{dataset}/{hy_job}")
-                            #ME_dict = {"Dataset": dataset, "Run": runs[i], "Job": job, "ME histogram": ME_histogram}
+                            ME_dict = {"Dataset": dataset, "Run": run, "Job": hy_job, "ME histogram": ME_histogram}
                             
                             ME_dataframes.append(pd.DataFrame([ME_dict]))  
         except FileNotFoundError:
             print(f"⚠️ WARNING: 3 File not found {path}")
-            #dataframes.append(pd.DataFrame([dataset_info]))
-            #ME_dataframes.append(pd.DataFrame([dataset_info]))
+            dataframes.append(pd.DataFrame([dataset_info]))
+            ME_dataframes.append(pd.DataFrame([dataset_info]))
             #continue
             
         return dataframes, ME_dataframes
