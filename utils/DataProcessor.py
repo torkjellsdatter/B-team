@@ -104,7 +104,9 @@ class DataProcessor:
         return data_df, ME_df
     
     def read_AO2D(self, path, dataset, run, hy_job, filename="AO2D.root"):
-        
+        """
+        Method reads a single AO2D, looped over i read_data
+        """
         dataframes = []
         ME_dataframes = []
         
