@@ -9,6 +9,7 @@ class FitSettings:
     fitMin: float
     fitMax: float
     bin_width: float
+    kde_window: float
     mass_column_name: str = "correctedMass"
     pt_column_name: str = "fpTBcandidate"
     savefig_path: str = "plots"
