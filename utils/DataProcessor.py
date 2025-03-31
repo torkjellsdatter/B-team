@@ -5,19 +5,14 @@ import pandas as pd
 import os
 import json
 
+from utils.config import FitSettings
+
 class DataProcessor:
     """
     Reads, pre-process and tests derived data sets from both tableReader and dqEfficiency
-
-    Attributes:
-        jpsi_mass (float): PDG mass of J/ψ (GeV/c²).
-        Bplus_mass (float): PDG mass of B⁺ (GeV/c²).
     """
 
-    jpsi_mass = 3.096916  # GeV/c²
-    Bplus_mass = 5.27934  # GeV/c²
-
-    def __init__(self, directory, datasets, electron_cut_name=None, kaon_cut_name = None, filename="AO2D.root", ARname="AnalysisResults.root", verbose=False):
+    def __init__(self, directory, datasets, settings: FitSettings, electron_cut_name=None, kaon_cut_name = None, filename="AO2D.root", ARname="AnalysisResults.root", verbose=False):
         """
         Initializes the DataProcessor.
 
@@ -27,6 +22,7 @@ class DataProcessor:
             filename (str, optional): HL output is always AO2D.root - but for local runs the name is specified in the writer config
             verbose (bool, optional): If True, prints debug messages.
         """
+        self.settings = settings
         self.directory = directory
         self.datasets = datasets
         self.electron_cut_name = electron_cut_name
@@ -181,7 +177,7 @@ class DataProcessor:
         if mass_col is None:
             print("⚠️ WARNING: Neither 'fdeltamassBcandidate' nor 'fdeltaMassBcandidate' found in DataFrame")
         else:
-            df["correctedMass"] = df[mass_col] + self.jpsi_mass
+            df[self.settings.mass_column_name] = df[mass_col] + self.settings.pdg_mass_jpsi
 
         return df
     
@@ -387,7 +383,7 @@ class DataProcessor:
             counts, bin_edges = np.histogram(group["correctedMass"], bins=bins)
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-            n = group["correctedMass"].shape[0]
+            n = group[settings.mass_column_name].shape[0]
             legend = f"{run_period}: {n} entries"
 
             plt.plot(bin_centers, counts, label=legend, marker=".")

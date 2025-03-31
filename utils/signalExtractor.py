@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from utils.config import FitSettings
+
 from iminuit import Minuit
 from iminuit.cost import LeastSquares
 import inspect
