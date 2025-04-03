@@ -107,7 +107,8 @@ class SignalExtractor:
         minuit = Minuit(least_squares, **param_values)
         
         # ----- Set limits ------
-        if "sigma" in param_values: minuit.limits["sigma"] = (0.02, 0.5)
+        if "sigma" in param_values: minuit.limits["sigma"] = (0.02, 0.2)
+        if "mu" in param_values: minuit.limits["mu"] = (5.1, 5.5)
         if "n_sig" in param_values: minuit.limits["n_sig"] = (0., None) # scaling must be positive
         
         # fix the ratio of the correlated background to the signal size
