@@ -3,3 +3,7 @@
 
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+utils/.DS_Store
+figures/.DS_Store
+utils/__pycache__
