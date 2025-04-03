@@ -12,18 +12,20 @@ class FitSettings:
     fitMax: float = 100
     bin_width: float = 0.04
     kde_window: float = 0.2
+    allowed_fluctuation_for_corrbkg: float = 0.1
     mass_column_name: str = "correctedMass"
     pt_column_name: str = "fpTBcandidate"
     savefig_path: str = "plots"
     verbose: bool = False
-    xaxis_label: str = r"$m_{eeK^\pm} - m_{ee} + m_{J\psi, DPG}$ (GeV/$c^2$)"
+    fontsize: float = 28
+    xaxis_label: str = r"$\mathit{m}_{eeK^\pm} - \mathit{m}_{ee} + \mathit{m}_{J/\psi, PDG}$ (GeV/$\mathit{c}^2)$"
     signal_channels: Dict[str, int] = field(default_factory=lambda: {
         r"$B^\pm \rightarrow J/\psi + K^\pm$ (exclusive)": 1
     })
     background_channels: Dict[str, int] = field(default_factory=lambda: {
         r"$B^\pm \rightarrow J/\psi + K^\pm + X$": 2,
         r"$B^\pm \rightarrow J/\psi + X \rightarrow ee + K^\pm$": 4,
-        r"$B^0 \rightarrow J/\psi + X \rightarrow ee + K^\pm$": 8
+        r"$B^0 \rightarrow J/\psi + K^\pm + X$": 8
     })
     color_palette: Dict[str, list] = field(default_factory=lambda: {
         "6": ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"],
