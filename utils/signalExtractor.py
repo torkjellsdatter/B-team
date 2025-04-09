@@ -6,6 +6,7 @@ import inspect
 
 import matplotlib.pyplot as plt 
 from matplotlib.patches import Patch
+import matplotlib.gridspec as gridspec
 
 import scipy.integrate as integrate
 
@@ -33,6 +34,7 @@ class SignalExtractor:
         
         self.signal_size = None
         self.fit_params = None
+        self.shift_corrbkg = 0
 
     def bin_data(self):
         self.data_counts, self.bin_edges = np.histogram(self.df[self.settings.mass_column_name], bins=self.bins)
@@ -64,15 +66,15 @@ class SignalExtractor:
 
     def total_fit_func_exp(self, x, n_corrbkg, n_sig, mu, sigma, n_combkg, a):
         
-        return (n_corrbkg * self.corrbkg_template_func(x)) + (n_sig * self.gauss(x, mu, sigma)) + (n_combkg * np.exp(a * x))
+        return (n_corrbkg * (self.corrbkg_template_func(x) - self.shift_corrbkg)) + (n_sig * self.gauss(x, mu, sigma)) + (n_combkg * np.exp(a * x))
 
     def total_fit_func_poly2(self, x, n_corrbkg, n_sig, mu, sigma, a, b, c):
         
-        return (n_corrbkg * self.corrbkg_template_func(x)) + (n_sig * self.gauss(x, mu, sigma)) + self.poly2(x, a, b, c)
+        return (n_corrbkg * (self.corrbkg_template_func(x) - self.shift_corrbkg)) + (n_sig * self.gauss(x, mu, sigma)) + self.poly2(x, a, b, c)
 
     def total_fit_func_poly2ratio(self, x, n_corrbkg, n_sig, mu, sigma, a, b, c, d, e, f):
         
-        return (n_corrbkg * self.corrbkg_template_func(x)) + (n_sig * self.gauss(x, mu, sigma)) + self.poly2_ratio(x, a, b, c, d, e, f)
+        return (n_corrbkg * (self.corrbkg_template_func(x) - self.shift_corrbkg)) + (n_sig * self.gauss(x, mu, sigma)) + self.poly2_ratio(x, a, b, c, d, e, f)
 
     def fit(self): 
     
@@ -125,6 +127,9 @@ class SignalExtractor:
         self.fit_params = minuit.values
         
         self.chi2_reduced = minuit.fval / (len(self.bin_centers) - minuit.nfit)
+        
+        # ----- Define shift of correlated background ------
+        self.shift_corrbkg = self.settings.pdg_mass_b_meson - self.fit_params["mu"]
 
     def _integrate_signal(self):
         mu = self.fit_params["mu"]
@@ -160,9 +165,12 @@ class SignalExtractor:
         
         self.n_corr_scaled_with_signal_size = (f_c*self.fit_params["n_sig"]* I_s) / (I_c*(1 - f_c))
     
-    def plot_invariant_mass(self, legend_loc="upper right"):
-        
-        fig, ax = plt.subplots(figsize=(12, 10))
+    def plot_invariant_mass(self, legend_loc="upper right", plot_residuals=False):
+         
+        fig = plt.figure(figsize=(12, 14))
+        gs = gridspec.GridSpec(2, 1, height_ratios=[4, 1], hspace=0)
+        ax = fig.add_subplot(gs[0])
+
         ax.errorbar(self.bin_centers, self.data_counts, yerr=self.data_errors, fmt='o', color='black', ecolor='black', capsize=0, label='Data')
 
         x_fit = np.linspace(min(self.bin_centers), max(self.bin_centers), 500)
@@ -210,6 +218,17 @@ class SignalExtractor:
         ax.set_ylim([0, self.data_counts.max()*1.2])
         ax.legend(handles=ax.get_legend_handles_labels()[0] + legend_patches, loc=legend_loc, fontsize=self.settings.fontsize)
 
+        # ----------- residuals ----------- 
+        if plot_residuals:
+            ax_res = fig.add_subplot(gs[1], sharex=ax)  # Bottom panel for residuals
+            residuals = (self.data_counts / self.total_fit_func(np.linspace(min(self.bin_centers), max(self.bin_centers), len(self.data_counts)), *self.fit_params))
+            residuals_errors = (self.data_errors / self.total_fit_func(np.linspace(min(self.bin_centers), max(self.bin_centers), len(self.data_errors)), *self.fit_params))
+
+            ax_res.errorbar(self.bin_centers, residuals, yerr=residuals_errors, fmt='o', color='black', ecolor='black', capsize=0)
+            ax_res.axhline(1, color=self.settings.color_palette["10"][3], linestyle='--')
+            ax_res.set_xlabel(self.settings.xaxis_label, fontsize=self.settings.fontsize)
+            ax_res.set_ylabel('Data/total fit', fontsize=self.settings.fontsize)
+        
         fig.tight_layout()
         
         return fig, ax
